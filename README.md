@@ -13,7 +13,7 @@ Unless otherwise explicitly stated, the `POST` requests must have a
 must be formatted accordingly.
 
 | Method | Endpoint | Request body | Response body | Description |
-|---|---|---|
+|---|---|---|---|---|
 | `GET` | `/posts` | - | `Array<Post>` | Return an array of objects representing the last 20 posts. |
 | `GET` | `/posts/:n` | - | `Array<Post>` | Return an array of objects representing the last `n` posts. |
 | `POST` | `/api/:apikey` | `CreatePost` | - | Create a post. |
