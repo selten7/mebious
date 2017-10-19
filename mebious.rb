@@ -33,7 +33,8 @@ class MebiousApp < Sinatra::Base
   register Sinatra::Flash
   
   configure do
-    use Rack::Session::Cookie, :secret => "your secret here"
+    use Rack::Session::Cookie, :secret => ENV['MEBIOUS_SECRET'] || ''
+
     use Rack::Csrf, :raise => true, :skip => ['POST:/api/.*']
   end
 
