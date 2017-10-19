@@ -23,19 +23,19 @@ class Post < ActiveRecord::Base
     end
   end
 
-  # dear asshole who i had to implement this for:
-  # fuck you. fite me bitch.
   def self.spam?(text, ip)
-    last = self.last(4)
+    consecutive_posts = 5
 
-    if last.empty? or last.length < 5
+    last = self.last(consecutive_posts)
+
+    if last.empty? || last.length < consecutive_posts
       return false
     end
 
     spam = last.select { |post| post.ip != ip }.empty?
     unoriginal = last.select { |post| post.text.strip != text.strip }.empty?
 
-    if spam or unoriginal
+    if spam || unoriginal
       return true
     else
       return false
