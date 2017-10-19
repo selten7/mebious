@@ -1,37 +1,40 @@
-require 'sinatra'
-require 'sinatra/flash'
-require "yaml"
+require 'yaml'
+
+require 'active_record'
 require 'builder'
 require 'rack/csrf'
+require 'sinatra'
 require 'sinatra/cross_origin'
-require "active_record"
-require_relative 'models/posts'
-require_relative 'models/bans'
+require 'sinatra/flash'
+
 require_relative 'models/api'
-require_relative 'models/images'
+require_relative 'models/bans'
 require_relative 'models/filters'
+require_relative 'models/images'
+require_relative 'models/posts'
 require_relative 'utils/mebious'
 
 begin
-  config  = YAML.load_file "config.yml"
+  config  = YAML.load_file 'config.yml'
   [Post, API, Ban, Image, Filter].map { |klass|
-    klass.establish_connection config["database"]
+    klass.establish_connection config['database']
   }
 rescue Exception => e
-  puts "Error loading configuration."
+  puts 'Error loading configuration.'
   puts e
+
   exit 1
 end
 
 class MebiousApp < Sinatra::Base
-  set :allow_origin, :any
   set :allow_methods, [:get, :post, :options]
-  set :max_age, "1728000"
+  set :allow_origin, :any
   set :expose_headers, ['Content-Type']
+  set :max_age, '1728000'
 
   register Sinatra::CrossOrigin
   register Sinatra::Flash
-  
+
   configure do
     use Rack::Session::Cookie, :secret => ENV['MEBIOUS_SECRET'] || ''
 
@@ -55,20 +58,20 @@ class MebiousApp < Sinatra::Base
   post ('/posts') {
     ip = request.ip
 
-    if !params.has_key? "text"
-      flash[:error] = "You failed to include a message!"
+    if !params.has_key? 'text'
+      flash[:error] = 'You failed to include a message!'
       redirect '/'
     end
 
-    if params["text"].empty?
-      flash[:error] = "You failed to include a message!"
+    if params['text'].empty?
+      flash[:error] = 'You failed to include a message!'
       redirect '/'
     end
 
-    text = params["text"].strip
+    text = params['text'].strip
 
     if Post.duplicate? text
-      flash[:error] = "Duplicate post detected!"
+      flash[:error] = 'Duplicate post detected!'
       redirect '/'
     end
 
@@ -78,7 +81,7 @@ class MebiousApp < Sinatra::Base
     end
 
     if Filter.filtered? text
-      flash[:error] = "Your post was flagged as spam!"
+      flash[:error] = 'Your post was flagged as spam!'
       redirect '/'
     end
 
@@ -90,7 +93,7 @@ class MebiousApp < Sinatra::Base
     end
 
     if !text.ascii_only?
-      flash[:error] = "Your post contained an invalid character!"
+      flash[:error] = 'Your post contained an invalid character!'
       redirect '/'
     end
 
@@ -102,14 +105,14 @@ class MebiousApp < Sinatra::Base
   post ('/images') {
     ip = request.ip
 
-    if !params.has_key? "image"
+    if !params.has_key? 'image'
       redirect '/'
     else
       if Ban.banned? ip
         redirect '/'
       end
 
-      if !Image.add(params["image"][:tempfile], ip)
+      if !Image.add(params['image'][:tempfile], ip)
         redirect '/'
       end
 
@@ -120,14 +123,14 @@ class MebiousApp < Sinatra::Base
   get ('/images') {
     cross_origin
     content_type :json
-    Image.select("id, url, spawn, checksum").last(20).to_json
+    Image.select('id, url, spawn, checksum').last(20).to_json
   }
 
   # API - Recent Posts
   get ('/posts') {
     cross_origin
     content_type :json
-    Post.select("id, text, spawn, is_admin").last(20).to_json
+    Post.select('id, text, spawn, is_admin').last(20).to_json
   }
 
   # API - Last n Posts
@@ -140,7 +143,7 @@ class MebiousApp < Sinatra::Base
       redirect '/posts'
     end
 
-    Post.select("id, text, spawn, is_admin").last(n).to_json
+    Post.select('id, text, spawn, is_admin').last(n).to_json
   }
 
   # API - Post API
@@ -151,38 +154,39 @@ class MebiousApp < Sinatra::Base
     if API.allowed? params[:key]
       ip = request.ip
 
-      if !params.include? "text"
-        return {"ok" => false, "error" => "No text parameter!"}.to_json
+      if !params.include? 'text'
+        return {'ok' => false, 'error' => 'No text parameter!'}.to_json
       end
 
-      if params["text"].empty?
-        return {"ok" => false, "error" => "Empty text parameter!"}.to_json
+      if params['text'].empty?
+        return {'ok' => false, 'error' => 'Empty text parameter!'}.to_json
       end
 
-      text = params["text"].strip
+      text = params['text'].strip
 
       if Post.duplicate? text
-        return {"ok" => false, "error" => "Duplicate post!"}.to_json
+        return {'ok' => false, 'error' => 'Duplicate post!'}.to_json
       end
 
       if Ban.banned? ip
-        return {"ok" => false, "error" => "You're banned!"}.to_json
+        return {'ok' => false, 'error' => "You're banned!"}.to_json
       end
 
       if Filter.filtered? text
-        return {"ok" => false, "error" => "Your post has been detected as spam."}.to_json
+        return {'ok' => false, 'error' => 'Your post has been detected as spam.'}.to_json
       end
 
       Post.add(text, ip)
-      {"ok" => true}.to_json
+      {'ok' => true}.to_json
     else
-      {"ok" => false, "error" => "Invalid API key!"}.to_json
+      {'ok' => false, 'error' => 'Invalid API key!'}.to_json
     end
   }
 
   # RSS Feed
   get ('/rss') {
     @posts = Post.last(20)
+
     builder :rss
   }
 end
