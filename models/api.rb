@@ -1,13 +1,9 @@
-class API < ActiveRecord::Base 
-  self.table_name = "api"
+class API < ActiveRecord::Base
+  self.table_name = 'api'
 
   def self.allowed?(key)
-    res = self.where(:apikey => key)
+    res = where(apikey: key)
 
-    if res.length > 0
-      return true
-    else
-      return false
-    end
+    !res.empty?
   end
 end

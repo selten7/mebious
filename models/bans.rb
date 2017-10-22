@@ -1,11 +1,7 @@
-class Ban < ActiveRecord::Base 
+class Ban < ActiveRecord::Base
   def self.banned?(ip)
-    res = self.where(:ip => ip)
+    res = where(ip: ip)
 
-    if res.length > 0
-      return true
-    else
-      return false
-    end
+    !res.empty?
   end
 end

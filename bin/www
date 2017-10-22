@@ -1,0 +1,3 @@
+#!/bin/sh
+
+bundle exec rackup config.ru

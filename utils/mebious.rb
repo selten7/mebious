@@ -1,56 +1,53 @@
-# coding: utf-8
-require 'rack'
 require 'digest'
+require 'rack'
 
-# coding: utf-8
 module Mebious
   def gencolor(hue)
     sat = rand(100)
     lum = rand(20...100)
 
-    return "hsl(#{hue}, #{sat}%, #{lum}%)"
+    "hsl(#{hue}, #{sat}%, #{lum}%)"
   end
 
   def green
-    self.gencolor(120)
+    gencolor(120)
   end
 
   def red
-    self.gencolor(0)
+    gencolor(0)
   end
 
   def fonts
     fonts = [
-      "Times New Roman, Times, serif",
-      "Arial, Helvetica, sans-serif",
-      "Georgia, Times New Roman, Times, serif",
-      "Courier New, Courier, monospace"
+      'Times New Roman, Times, serif',
+      'Arial, Helvetica, sans-serif',
+      'Georgia, Times New Roman, Times, serif',
+      'Courier New, Courier, monospace'
     ]
 
-    fonts.shuffle.first
+    fonts.sample
   end
 
   def stylize(post)
-    if post.is_admin?
-      color = self.red
-    else
-      color = self.green
-    end
+    color = if post.is_admin?
+              red
+            else
+              green
+            end
 
     size = rand(0.8...2.0).round(2)
     x = rand(0.1...40).round(2)
-    font = self.fonts
+    font = fonts
 
-    return "color: #{color}; " \
+    "color: #{color}; " \
            "font-family: #{font};" \
            "font-size: #{size}em; " \
-           "position: relative; " \
+           'position: relative; ' \
            "left: #{x}%;"
-
   end
 
-  def style_image(image)
-    return "z-index: #{~rand(1...10)}; " \
+  def style_image(_image)
+    "z-index: #{~rand(1...10)}; " \
            "left: #{rand(0.1...50)}%; " \
            "opacity: #{rand(0.5...1)}; " \
            "top: #{rand(7.0..50)}%; "
@@ -58,39 +55,39 @@ module Mebious
 
   def corrupt(str)
     corruptions = [
-      {"u" => "ü"},
-      {"e" => "è"},
-      {"e" => "ë"},
-      {"a" => "@"},
-      {"u" => "ù"},
-      {"a" => "à"},
-      {"o" => "ò"},
-      {"s" => "$"},
-      {"i" => "ï"},
-      {"y" => "ÿ"},
-      {"i" => "î"},
-      {"a" => "á"},
-      {"a" => "ã"},
-      {"e" => "ê"},
-      {"i" => "ï"},
-      {"o" => "ô"},
-      {"o" => "ø"},
-      {"i" => "1"}
+      { 'u' => 'ü' },
+      { 'e' => 'è' },
+      { 'e' => 'ë' },
+      { 'a' => '@' },
+      { 'u' => 'ù' },
+      { 'a' => 'à' },
+      { 'o' => 'ò' },
+      { 's' => '$' },
+      { 'i' => 'ï' },
+      { 'y' => 'ÿ' },
+      { 'i' => 'î' },
+      { 'a' => 'á' },
+      { 'a' => 'ã' },
+      { 'e' => 'ê' },
+      { 'i' => 'ï' },
+      { 'o' => 'ô' },
+      { 'o' => 'ø' },
+      { 'i' => '1' }
     ]
 
     if rand(2) == 1
       n = rand(1..2)
-      chosen = corruptions.shuffle[0...n]
-      chosen.each { |corruption|
-        corruption.each_pair { |k, v|
-          str = str.gsub(k, v)
-        }
-      }
 
-      return str
-    else
-      return str
+      chosen = corruptions.shuffle[0...n]
+
+      chosen.each do |corruption|
+        corruption.each_pair do |k, v|
+          str = str.gsub(k, v)
+        end
+      end
     end
+
+    str
   end
 
   def sanitize(str)
@@ -101,5 +98,15 @@ module Mebious
     Digest::SHA512.hexdigest str
   end
 
-  module_function :green, :red, :gencolor, :stylize, :fonts, :corrupt, :sanitize, :digest, :style_image
+  module_function(
+    :green,
+    :red,
+    :gencolor,
+    :stylize,
+    :fonts,
+    :corrupt,
+    :sanitize,
+    :digest,
+    :style_image
+  )
 end

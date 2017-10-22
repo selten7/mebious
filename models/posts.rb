@@ -3,24 +3,21 @@ class Post < ActiveRecord::Base
     stamp = Time.now.to_i
     text = text[0...512]
 
-    self.create({
-      :spawn    => stamp,
-      :text     => text,
-      :ip       => ip,
-      :is_admin => 0,
-      :hidden   => 0
-    })
+    create(spawn: stamp,
+           text: text,
+           ip: ip,
+           is_admin: 0,
+           hidden: 0)
   end
 
   def self.duplicate?(str)
     last = self.last(1)
 
-    if last.empty?
-      return false
-    else
-      txt = last[0].text
-      return (txt == str)
-    end
+    return false if last.empty?
+
+    txt = last[0].text
+
+    txt == str
   end
 
   def self.spam?(text, ip)
@@ -28,17 +25,11 @@ class Post < ActiveRecord::Base
 
     last = self.last(consecutive_posts)
 
-    if last.empty? || last.length < consecutive_posts
-      return false
-    end
+    return false if last.empty? || last.length < consecutive_posts
 
-    spam = last.select { |post| post.ip != ip }.empty?
-    unoriginal = last.select { |post| post.text.strip != text.strip }.empty?
+    spam = last.reject { |post| post.ip == ip }.empty?
+    unoriginal = last.reject { |post| post.text.strip == text.strip }.empty?
 
-    if spam || unoriginal
-      return true
-    else
-      return false
-    end
+    spam || unoriginal
   end
 end

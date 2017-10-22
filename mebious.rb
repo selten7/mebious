@@ -14,20 +14,14 @@ require_relative 'models/images'
 require_relative 'models/posts'
 require_relative 'utils/mebious'
 
-begin
-  config  = YAML.load_file 'config.yml'
-  [Post, API, Ban, Image, Filter].map { |klass|
-    klass.establish_connection config['database']
-  }
-rescue Exception => e
-  puts 'Error loading configuration.'
-  puts e
+config = YAML.load_file 'config.yml'
 
-  exit 1
+[Post, API, Ban, Image, Filter].map do |klass|
+  klass.establish_connection config['database']
 end
 
 class MebiousApp < Sinatra::Base
-  set :allow_methods, [:get, :post, :options]
+  set :allow_methods, %i[get post options]
   set :allow_origin, :any
   set :expose_headers, ['Content-Type']
   set :max_age, '1728000'
@@ -36,9 +30,9 @@ class MebiousApp < Sinatra::Base
   register Sinatra::Flash
 
   configure do
-    use Rack::Session::Cookie, :secret => ENV['MEBIOUS_SECRET'] || ''
+    use Rack::Session::Cookie, secret: ENV['MEBIOUS_SECRET'] || ''
 
-    use Rack::Csrf, :raise => true, :skip => ['POST:/api/.*']
+    use Rack::Csrf, raise: true, skip: ['POST:/api/.*']
   end
 
   helpers do
@@ -47,146 +41,122 @@ class MebiousApp < Sinatra::Base
     end
   end
 
-  # Main page.
-  get ('/') {
-    @posts = Post.where(:hidden => 0).last(20).to_a
+  get '/' do
+    @posts = Post.where(hidden: 0).last(20).to_a
     @images = Image.last(10).to_a
-    erb :index
-  }
 
-  # Make post
-  post ('/posts') {
+    erb :index
+  end
+
+  post '/posts' do
     ip = request.ip
 
-    if !params.has_key? 'text'
-      flash[:error] = 'You failed to include a message!'
-      redirect '/'
-    end
+    if params.key?('text') || params['text'].empty?
+      flash[:error] = 'You failed to include a message.'
 
-    if params['text'].empty?
-      flash[:error] = 'You failed to include a message!'
       redirect '/'
+
+      return
     end
 
     text = params['text'].strip
 
     if Post.duplicate? text
-      flash[:error] = 'Duplicate post detected!'
-      redirect '/'
-    end
-
-    if Ban.banned? ip
-      flash[:error] = "You're banned from posting!"
-      redirect '/'
-    end
-
-    if Filter.filtered? text
-      flash[:error] = 'Your post was flagged as spam!'
-      redirect '/'
-    end
-
-    if Post.spam? text, ip
+      flash[:error] = 'Duplicate post detected.'
+    elsif Ban.banned? ip
+      flash[:error] = "You're banned from posting."
+    elsif Filter.filtered? text
+      flash[:error] = 'Your post was flagged as spam.'
+    elsif Post.spam? text, ip
       flash[:error] = "You're posting way too frequently."
-      Ban.create(:ip => ip)
-      Post.where(:ip => ip).delete_all # fuck you too
-      redirect '/'
+
+      Ban.create(ip: ip)
+      Post.where(ip: ip).delete_all
+    elsif !text.ascii_only?
+      flash[:error] = 'Your post contained an invalid character.'
     end
 
-    if !text.ascii_only?
-      flash[:error] = 'Your post contained an invalid character!'
-      redirect '/'
-    end
+    Post.add(text, ip) unless flash[:error]
 
-    Post.add(text, ip)
     redirect '/'
-  }
+  end
 
-  # Make image post
-  post ('/images') {
+  get '/images' do
+    cross_origin
+    content_type :json
+
+    Image.select('id, url, spawn, checksum').last(20).to_json
+  end
+
+  post '/images' do
     ip = request.ip
 
-    if !params.has_key? 'image'
-      redirect '/'
-    else
-      if Ban.banned? ip
-        redirect '/'
-      end
+    Image.add(params['image'][:tempfile], ip) if params.key?('image')
 
-      if !Image.add(params['image'][:tempfile], ip)
-        redirect '/'
-      end
+    redirect '/'
+  end
 
-      redirect '/'
-    end
-  }
-
-  get ('/images') {
+  # Recent posts.
+  get '/posts' do
     cross_origin
     content_type :json
-    Image.select('id, url, spawn, checksum').last(20).to_json
-  }
 
-  # API - Recent Posts
-  get ('/posts') {
-    cross_origin
-    content_type :json
     Post.select('id, text, spawn, is_admin').last(20).to_json
-  }
+  end
 
-  # API - Last n Posts
-  get ('/posts/:n') {
+  get '/posts/:n' do
     cross_origin
     content_type :json
 
     n = params[:n].to_i
-    if (n > 50 or n < 1)
-      redirect '/posts'
-    end
+    redirect '/posts' if (n > 50) || (n < 1)
 
     Post.select('id, text, spawn, is_admin').last(n).to_json
-  }
+  end
 
-  # API - Post API
-  post ('/api/:key') {
+  post '/api/:key' do
     cross_origin
     content_type :json
 
-    if API.allowed? params[:key]
-      ip = request.ip
-
-      if !params.include? 'text'
-        return {'ok' => false, 'error' => 'No text parameter!'}.to_json
-      end
-
-      if params['text'].empty?
-        return {'ok' => false, 'error' => 'Empty text parameter!'}.to_json
-      end
-
-      text = params['text'].strip
-
-      if Post.duplicate? text
-        return {'ok' => false, 'error' => 'Duplicate post!'}.to_json
-      end
-
-      if Ban.banned? ip
-        return {'ok' => false, 'error' => "You're banned!"}.to_json
-      end
-
-      if Filter.filtered? text
-        return {'ok' => false, 'error' => 'Your post has been detected as spam.'}.to_json
-      end
-
-      Post.add(text, ip)
-      {'ok' => true}.to_json
-    else
-      {'ok' => false, 'error' => 'Invalid API key!'}.to_json
+    unless API.allowed? params[:key]
+      return {
+        'ok' => false,
+        'error' => 'Invalid API key.'
+      }.to_json
     end
-  }
 
-  # RSS Feed
-  get ('/rss') {
+    ip = request.ip
+
+    errmsg = nil
+
+    if !params.include?('text')
+      errmsg = 'Missing text parameter.'
+    elsif params['text'].empty?
+      errmsg = 'Empty text parameter.'
+    end
+
+    return { 'ok' => false, 'error' => errmsg }.to_json if errmsg
+
+    text = params['text'].strip
+
+    if Post.duplicate? text
+      errmsg = 'Duplicate post.'
+    elsif Ban.banned? ip
+      errmsg = "You're banned."
+    elsif Filter.filtered? text
+      errmsg = 'Your post has been detected as spam.'
+    end
+
+    return { 'ok' => false, 'error' => errmsg }.to_json if errmsg
+
+    Post.add(text, ip)
+
+    { 'ok' => true }.to_json
+  end
+
+  get '/rss' do
     @posts = Post.last(20)
 
     builder :rss
-  }
+  end
 end

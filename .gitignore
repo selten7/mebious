@@ -1,7 +1,4 @@
-\#*#
-*~
-config.json
-tmp/
-unicorn.rb
-mebious.db
-public/images/
+/.bundle/
+/data/
+/public/images/
+/vendor/

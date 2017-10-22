@@ -1,12 +1,9 @@
----
-#database:
-#  :adapter: mysql2
-#  :host: localhost
-#  :username: mebious
-#  :database: mebious
-#  :password: mebious
-
 database:
   :adapter: sqlite3
-  :database: mebious.db
-...
+  :database: data/mebious.db
+
+rss:
+  # Notice the trailing slash.
+  prefix: 'http://example.com/'
+
+  description: 'Example description.'

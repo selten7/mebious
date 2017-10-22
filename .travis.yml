@@ -1,0 +1,4 @@
+language: ruby
+script: make lint
+rvm:
+  - 2.4

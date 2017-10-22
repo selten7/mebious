@@ -10,3 +10,5 @@ gem 'sinatra', '~> 1.4'
 gem 'sinatra-cross_origin', '~> 0.3'
 gem 'sinatra-flash', '~> 0.3'
 gem 'sqlite3', '~> 1.3'
+
+gem 'rubocop', '~> 0.51', group: :development
