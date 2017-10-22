@@ -39,18 +39,22 @@ module Mebious
     x = rand(0.1...40).round(2)
     font = fonts
 
-    "color: #{color}; " \
-           "font-family: #{font};" \
-           "font-size: #{size}em; " \
-           'position: relative; ' \
-           "left: #{x}%;"
+    [
+      "color: #{color};",
+      "font-family: #{font};",
+      "font-size: #{size}em;",
+      'position: relative;',
+      "left: #{x}%;"
+    ].join ' '
   end
 
   def style_image(_image)
-    "z-index: #{~rand(1...10)}; " \
-           "left: #{rand(0.1...50)}%; " \
-           "opacity: #{rand(0.5...1)}; " \
-           "top: #{rand(7.0..50)}%; "
+    [
+      "z-index: #{~rand(1...10)};",
+      "left: #{rand(0.1...50)}%;",
+      "opacity: #{rand(0.5...1)};",
+      "top: #{rand(7.0..50)}%;"
+    ].join ' '
   end
 
   def corrupt(str)
